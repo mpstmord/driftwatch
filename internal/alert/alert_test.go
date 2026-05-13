@@ -75,3 +75,24 @@ func TestDrift_SendsWarnLevel(t *testing.T) {
 		t.Errorf("expected WARN level in drift alert, got: %s", out)
 	}
 }
+
+func TestSend_ContainsTimestamp(t *testing.T) {
+	var buf bytes.Buffer
+	a := alert.New(&buf)
+
+	e := alert.Event{
+		Timestamp: time.Date(2024, 6, 1, 9, 30, 0, 0, time.UTC),
+		Level:     alert.LevelWarn,
+		FilePath:  "/etc/app/config.yaml",
+		Message:   "drift detected",
+	}
+
+	if err := a.Send(e); err != nil {
+		t.Fatalf("Send returned error: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "2024") {
+		t.Errorf("expected timestamp year in output, got: %s", out)
+	}
+}
