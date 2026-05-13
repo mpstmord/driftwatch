@@ -29,6 +29,21 @@ func newTestConfig(t *testing.T, paths []string) *config.Config {
 	}
 }
 
+// newRunnerWithBaseline is a test helper that creates a Runner and immediately
+// establishes a baseline, so tests can focus on drift-detection behaviour.
+func newRunnerWithBaseline(t *testing.T, paths []string) *runner.Runner {
+	t.Helper()
+	cfg := newTestConfig(t, paths)
+	r, err := runner.New(cfg)
+	if err != nil {
+		t.Fatalf("New(): %v", err)
+	}
+	if err := r.UpdateBaseline(); err != nil {
+		t.Fatalf("UpdateBaseline(): %v", err)
+	}
+	return r
+}
+
 func TestNew_CreatesRunnerWithoutExistingBaseline(t *testing.T) {
 	dir := t.TempDir()
 	f := writeTempFile(t, dir, "app.conf", "key=value")
@@ -46,17 +61,8 @@ func TestNew_CreatesRunnerWithoutExistingBaseline(t *testing.T) {
 func TestRun_NoDriftOnFreshBaseline(t *testing.T) {
 	dir := t.TempDir()
 	f := writeTempFile(t, dir, "app.conf", "key=value")
-	cfg := newTestConfig(t, []string{f})
 
-	r, err := runner.New(cfg)
-	if err != nil {
-		t.Fatalf("New() unexpected error: %v", err)
-	}
-
-	// Establish baseline first so Run sees no drift.
-	if err := r.UpdateBaseline(); err != nil {
-		t.Fatalf("UpdateBaseline() unexpected error: %v", err)
-	}
+	r := newRunnerWithBaseline(t, []string{f})
 
 	if err := r.Run(context.Background()); err != nil {
 		t.Fatalf("Run() unexpected error: %v", err)
